@@ -5,7 +5,7 @@ WIDTH = 360
 HEIGHT = 640
 
 
-def blitRotate(image, originPos, angle):
+def blitRotate(image, originPos, angle):    # поворот изображения
     w, h = image.get_size()
     box = [pygame.math.Vector2(p) for p in [(0, 0), (w, 0), (w, -h), (0, -h)]]
     box_rotate = [p.rotate(angle) for p in box]
@@ -18,40 +18,40 @@ def blitRotate(image, originPos, angle):
     return rotated_image
 
 
-class Person(pygame.sprite.Sprite):
-    def __init__(self, group, ims, im_lose, music):
+class Person(pygame.sprite.Sprite):     # персонаж
+    def __init__(self, group, ims, im_lose, sounds):
         super().__init__(group)
-        self.music = music
-        self.im_lose = im_lose
-        self.ims = ims
+        self.sounds = sounds                                # звуки умирания
+        self.im_lose = im_lose                              # избражение при проигрыше
+        self.ims = ims                                      # изображения
         self.image = ims[1]
         self.rect = ims[1].get_rect()
-        self.k = -1
+        self.k = -1                                         # переменная для прыжка
         self.anim = 0
-        self.orientation = True
+        self.orientation = True                             # орентация (вправо, влево)
         self.rect.x = 180
         self.rect.y = 320
         self.mask = pygame.mask.from_surface(self.image)
-        self.i = 0
+        self.i = 0                                          # переменная для анмации
 
-    def motion(self, pos):
+    def motion(self, pos):   # движение по горизонтали
         if self.rect.x - pos[0] < 0:
             self.orientation = True
         else:
             self.orientation = False
         self.rect.x = pos[0]
 
-    def jump(self):
+    def jump(self):         # задаём, что прыжок начат
         self.k = 0
 
-    def lose(self):
-        choice(self.music).play()
+    def lose(self):         # функция для проигрыша
+        choice(self.sounds).play()                          # выбор звука при проигрыше
         if self.orientation:
             self.image = self.im_lose
         else:
             self.image = pygame.transform.flip(self.im_lose, True, False)
 
-    def update(self, *arg):
+    def update(self, *arg):  # прыжок и падение
         if 0 <= self.k <= 24:
             self.k += 2
             self.rect.y -= 2
@@ -64,7 +64,7 @@ class Person(pygame.sprite.Sprite):
             self.rect.y += 1
         self.mask = pygame.mask.from_surface(self.image)
 
-    def animation(self):
+    def animation(self):  # анимация
         self.i += 1
         self.i %= len(self.ims)
         self.image = self.ims[self.i]
@@ -73,7 +73,7 @@ class Person(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
 
 
-class Enemies(pygame.sprite.Sprite):
+class Enemies(pygame.sprite.Sprite):    # миньон
     def __init__(self, all_obstacles, group, ims, x, y):
         super().__init__(group, all_obstacles)
         self.im = choice(ims)
@@ -81,9 +81,8 @@ class Enemies(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.move = (randrange(-3, 4, 2), randrange(-3, 4, 2))
+        self.move = (randrange(-3, 4, 2), randrange(-3, 4, 2))  # скорость
         self.angle = -2
-        self.side = 1
         self.x = x
         self.y = y
         self.mask = pygame.mask.from_surface(self.image)
@@ -93,17 +92,17 @@ class Enemies(pygame.sprite.Sprite):
             pass
         else:
             self.kill()
-        self.image = blitRotate(self.im, self.rect.center, self.angle)
+        self.image = blitRotate(self.im, self.rect.center, self.angle)  # поворот картинки
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
-        self.angle -= self.side
+        self.angle -= 1
         self.x += self.move[0]
         self.y += self.move[1]
         self.rect.x = self.x
         self.rect.y = self.y
 
 
-class Timer(pygame.sprite.Sprite):
+class Timer(pygame.sprite.Sprite):  # таймер
     def __init__(self, group):
         super().__init__(group)
         self.timer = 0
@@ -127,7 +126,7 @@ class Timer(pygame.sprite.Sprite):
         self.timer = 0
 
 
-class GameOver(pygame.sprite.Sprite):
+class GameOver(pygame.sprite.Sprite):   # экран поражения
     def __init__(self, group, files):
         super().__init__(group)
         self.image = files[1]
@@ -144,11 +143,12 @@ class GameOver(pygame.sprite.Sprite):
 
 
 class Boss1(pygame.sprite.Sprite):  # Pacman
-    def __init__(self, group, all_obstacles, ims):
-        super().__init__(group, all_obstacles)
-        self.i = 0
-        self.image = ims[self.i]
-        self.ims = ims
+    def __init__(self, group, all_obstacles, ims, sounds):      # Как устроенны боссы сложно понять, но возможно:
+        super().__init__(group, all_obstacles)                  # В главном фаиле я создал список, в котором 3 класса
+        self.i = 0                                              # спрайтов. Они существуют сразу же после запуска игры,
+        self.sounds = sounds                                    # но начанают работать только каждые 9 секунд.
+        self.image = ims[self.i]                                # в каждом есть функции: анимация, запуск, остановка и
+        self.ims = ims                                          # и update
         self.rect = self.image.get_rect()
         self.work = False
         self.v = 5
@@ -158,22 +158,26 @@ class Boss1(pygame.sprite.Sprite):  # Pacman
 
     def start(self):
         self.work = True
+        self.sounds.play()
 
     def update(self, *args):
-        if self.work and args[0] == 'stop':
-            self.stop()
-        elif self.work and args[0] == 'anim':
-            self.anim()
-        elif self.work:
-            self.rect.x += self.v
-            if self.rect.x == WIDTH:
-                self.v = -self.v
-                self.rect.y = HEIGHT - 400
-                self.orientation = True
-            if self.rect.x < -400:
+        if self.work:
+            if args[0] == 'stop':
                 self.stop()
+            elif args[0] == 'anim':
+                self.anim()
+            else:
+                self.rect.x += self.v
+                if self.rect.x == WIDTH:
+                    self.v = -self.v
+                    self.rect.y = HEIGHT - 400
+                    self.sounds.play()
+                    self.orientation = True
+                if self.rect.x < -400:
+                    self.stop()
 
     def stop(self):
+        self.sounds.stop()
         self.work = False
         self.v = 5
         self.orientation = False
@@ -189,54 +193,165 @@ class Boss1(pygame.sprite.Sprite):  # Pacman
 
 
 class Boss2(pygame.sprite.Sprite):  # Стрела
-    def __init__(self, group, all_obstacles, ims, timer):
+    def __init__(self, group, all_obstacles, ims, timer, sounds):       # обычная стрела просто летит постоянно сверху
         super().__init__(all_obstacles, group)
+        self.sounds = sounds
         self.timer = timer
         self.image = ims
         self.rect = self.image.get_rect()
         self.rect.y = -100
         self.v = 20
-        self.k = 0
         self.work = False
         self.mask = pygame.mask.from_surface(self.image)
 
     def start(self):
         self.work = True
         self.begin = self.timer.timer
+        self.sounds.play()
 
     def stop(self):
         self.work = False
         self.rect.y = -100
 
     def update(self, *args):
-        if self.work and ((self.timer.timer % 9 == 0 and self.timer.timer != self.begin) or args[0] == 'stop'):
-            self.stop()
-        elif self.work:
-            if self.rect.y > HEIGHT:
-                self.rect.y = -45
-                self.rect.x = randrange(0, WIDTH)
-                self.k += 1
-            self.rect.y += self.v
+        if self.work:
+            if (self.timer.timer % 9 == 0 and self.timer.timer != self.begin) or args[0] == 'stop':
+                self.stop()
+            else:
+                if self.rect.y > HEIGHT:
+                    self.rect.y = -45
+                    self.rect.x = randrange(0, WIDTH)
+                    self.sounds.play()
+                self.rect.y += self.v
 
 
-class Boss3(pygame.sprite.Sprite):
-    def __init__(self, all_bosses, all_obstacles, ims):
-        super().__init__(all_obstacles, all_bosses)
-        self.ims = ims
-        self.image = self.ims[0]
-        self.rect = self.image.get_rect()
-        self.rect.x = WIDTH + 33
-        self.rect.y = HEIGHT - 154
+class Boss3(pygame.sprite.Sprite):  # Mario
+    def __init__(self, all_bosses, all_obstacles, ims, sounds):     # С Марио я решил заморочиться, если вы играли,
+        super().__init__(all_obstacles, all_bosses)                 # то увидели бы. Но всё равно скажу: сначала Марио
+        self.sounds = sounds                                        # идёт в центр и увеличивается будто под грибами.
+        self.ims = ims                                              # Потом уменьшается и уходит за карту.
+        self.i = 0                                                  # У него много действий и я решил разделить его
+        self.image = self.ims[self.i]                               # движение на 4 этапа(stage): прогулка до центра,
+        self.rect = self.image.get_rect()                           # увеличение, уменьшение, прогулка за карту.
+        self.rect.x = -32
+        self.rect.y = HEIGHT - self.rect.height
         self.work = False
         self.mask = pygame.mask.from_surface(self.image)
+        self.stage = -1
+        self.size = 0
 
-    def star(self):
+    def start(self):
         self.work = True
+        self.stage = 0
+        self.sounds[0].play()
 
     def stop(self):
         self.image = self.ims[0]
         self.rect = self.image.get_rect()
-        self.rect.x = WIDTH + 33
-        self.rect.y = HEIGHT - 154
+        self.rect.x = -32
+        self.rect.y = HEIGHT - self.rect.height
         self.work = False
         self.mask = pygame.mask.from_surface(self.image)
+        self.stage = -1
+        self.size = 0
+
+    def anim(self):                 # это длинная анимация не такая уж и страшная. Марио есть Марио
+        if self.stage == 0:
+            self.i += 1
+            self.i %= len(self.ims)
+            self.image = self.ims[self.i]
+            x = self.rect.x
+            y = self.rect.y
+            self.rect = self.image.get_rect()
+            self.rect.x = x
+            self.rect.y = y
+            self.mask = pygame.mask.from_surface(self.image)
+            if self.rect.x != 32 * 5:
+                self.rect.x += 16
+            else:
+                self.stage = 1
+        elif self.stage == 1:
+            if self.size == 0:
+                self.image = pygame.transform.scale2x(self.ims[0])
+                self.rect = self.image.get_rect()
+                self.rect.x = (32 * 4.5)
+                self.size += 1
+                self.rect.y = HEIGHT - self.rect.height
+                self.mask = pygame.mask.from_surface(self.image)
+                self.sounds[1].play()
+            elif self.size == 1:
+                self.image = pygame.transform.scale2x(self.image)
+                self.rect = self.image.get_rect()
+                self.rect.x = int(32 * 3.5)
+                self.size += 1
+                self.rect.y = HEIGHT - self.rect.height
+                self.mask = pygame.mask.from_surface(self.image)
+            elif self.size == 2:
+                self.image = pygame.transform.scale2x(self.image)
+                self.rect = self.image.get_rect()
+                self.rect.x = int(32 * 1.5)
+                self.size += 1
+                self.rect.y = HEIGHT - self.rect.height
+                self.mask = pygame.mask.from_surface(self.image)
+            elif self.size == 3:
+                self.image = pygame.transform.scale2x(self.image)
+                self.rect = self.image.get_rect()
+                self.rect.x = int(32 * -2)
+                self.size += 1
+                self.stage += 1
+                self.rect.y = HEIGHT - self.rect.height
+                self.mask = pygame.mask.from_surface(self.image)
+        elif self.stage == 2:
+            if self.size == 4:
+                self.image = pygame.transform.scale2x(self.ims[0])
+                self.image = pygame.transform.scale2x(self.image)
+                self.image = pygame.transform.scale2x(self.image)
+                self.rect = self.image.get_rect()
+                self.rect.x = int(32 * 1.5)
+                self.size -= 1
+                self.rect.y = HEIGHT - self.rect.height
+                self.mask = pygame.mask.from_surface(self.image)
+            elif self.size == 3:
+                self.image = pygame.transform.scale2x(self.ims[0])
+                self.image = pygame.transform.scale2x(self.image)
+                self.rect = self.image.get_rect()
+                self.rect.x = int(32 * 2.5)
+                self.size -= 1
+                self.rect.y = HEIGHT - self.rect.height
+                self.mask = pygame.mask.from_surface(self.image)
+            elif self.size == 2:
+                self.image = pygame.transform.scale2x(self.ims[0])
+                self.rect = self.image.get_rect()
+                self.rect.x = int(32 * 4.5)
+                self.size -= 1
+                self.rect.y = HEIGHT - self.rect.height
+                self.mask = pygame.mask.from_surface(self.image)
+            elif self.size == 1:
+                self.image = self.ims[0]
+                self.rect = self.image.get_rect()
+                self.rect.x = 32 * 5
+                self.rect.y = HEIGHT - self.rect.height
+                self.size -= 1
+                self.stage += 1
+                self.mask = pygame.mask.from_surface(self.image)
+        elif self.stage == 3:
+            self.i += 1
+            self.i %= len(self.ims)
+            self.image = self.ims[self.i]
+            x = self.rect.x
+            y = self.rect.y
+            self.rect = self.image.get_rect()
+            self.rect.x = x
+            self.rect.y = y
+            self.mask = pygame.mask.from_surface(self.image)
+            if self.rect.x < WIDTH + 32:
+                self.rect.x += 16
+            else:
+                self.stop()
+
+    def update(self, *args):
+        if self.work:
+            if args[0] == 'anim':
+                self.anim()
+            elif args[0] == 'stop':
+                self.stop()
